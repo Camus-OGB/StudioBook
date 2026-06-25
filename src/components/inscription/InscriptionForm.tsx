@@ -208,7 +208,11 @@ export default function InscriptionForm() {
 
           <div className="mt-6 flex flex-col gap-2.5">
             <button
-              onClick={() => router.push(`/reservation?id=${resultId}`)}
+              onClick={() =>
+                router.push(
+                  `/reservation?id=${resultId}&nom=${encodeURIComponent(data.nom)}`,
+                )
+              }
               className="rounded-xl bg-ima-accent px-5 py-[15px] font-sora text-[15px] font-bold text-[#3a2700] transition hover:brightness-95"
             >
               Réserver maintenant →

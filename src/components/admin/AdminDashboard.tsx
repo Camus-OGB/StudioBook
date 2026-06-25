@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Modal from '@/components/ui/Modal'
 import StatsCards from '@/components/admin/StatsCards'
 import UsagersTable from '@/components/admin/UsagersTable'
@@ -32,6 +33,7 @@ const inputCls =
   'rounded-xl border-[1.5px] border-[#E4E1EE] px-3.5 py-2.5 text-sm outline-none transition focus:border-ima-primary focus:ring-[3px] focus:ring-ima-primary/15'
 
 export default function AdminDashboard() {
+  const router = useRouter()
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [usersTotal, setUsersTotal] = useState(0)
@@ -166,6 +168,16 @@ export default function AdminDashboard() {
     else void loadReservations()
   }
 
+  async function deconnexion() {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' })
+    } catch {
+      /* ignore */
+    }
+    router.replace('/admin/login')
+    router.refresh()
+  }
+
   const total = activeTab === 'users' ? usersTotal : resTotal
   const page = activeTab === 'users' ? usersPage : resPage
   const items = activeTab === 'users' ? users : reservations
@@ -183,7 +195,15 @@ export default function AdminDashboard() {
           </div>
           <h1 className="mt-1 font-sora text-[28px] font-extrabold">Tableau de bord</h1>
         </div>
-        <div className="text-[13px] text-ima-faint">Cotonou · {todayLabel}</div>
+        <div className="flex items-center gap-4">
+          <span className="text-[13px] text-ima-faint">Cotonou · {todayLabel}</span>
+          <button
+            onClick={deconnexion}
+            className="rounded-lg border border-[#d9d0f2] bg-white px-3.5 py-2 text-[13px] font-semibold text-ima-primary transition hover:bg-ima-lilac"
+          >
+            Déconnexion
+          </button>
+        </div>
       </div>
 
       {stats && (

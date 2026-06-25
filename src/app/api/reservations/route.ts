@@ -3,9 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { reservationSchema } from '@/lib/validations'
 import { invalidValues } from '@/lib/catalog'
 import { combineDateTime, checkEspaceAvailability } from '@/lib/planning'
+import { rateLimit, clientIp, tooMany } from '@/lib/rateLimit'
 
 // POST /api/reservations → créer une réservation
 export async function POST(request: NextRequest) {
+  // Anti-spam : 15 réservations / heure par IP
+  const limite = rateLimit(`reservation:${clientIp(request)}`, 15, 60 * 60 * 1000)
+  if (!limite.ok) return tooMany(limite.retryAfter)
+
   let body: unknown
   try {
     body = await request.json()

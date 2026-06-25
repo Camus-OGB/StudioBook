@@ -3,9 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { userSchema } from '@/lib/validations'
 import { genUserId } from '@/lib/utils'
 import { invalidValues } from '@/lib/catalog'
+import { rateLimit, clientIp, tooMany } from '@/lib/rateLimit'
 
 // POST /api/users → créer un usager
 export async function POST(request: NextRequest) {
+  // Anti-spam : 10 inscriptions / heure par IP
+  const limite = rateLimit(`signup:${clientIp(request)}`, 10, 60 * 60 * 1000)
+  if (!limite.ok) return tooMany(limite.retryAfter)
+
   let body: unknown
   try {
     body = await request.json()

@@ -67,6 +67,7 @@ function ReservationFormInner() {
   const [data, setData] = useState<FormData>(INITIAL)
   const [verified, setVerified] = useState(false)
   const [verifyError, setVerifyError] = useState<string | null>(null)
+  const [verifyNom, setVerifyNom] = useState('')
   const [verifyName, setVerifyName] = useState('')
   const [verifyEmail, setVerifyEmail] = useState('')
   const [loading, setLoading] = useState(false)
@@ -102,16 +103,19 @@ function ReservationFormInner() {
     }))
   }
 
-  async function verifier(id: string) {
+  async function verifier(id: string, nom: string) {
     const cible = id.trim()
-    if (!cible) {
-      setVerifyError('Saisissez votre identifiant')
+    const nomCible = nom.trim()
+    if (!cible || !nomCible) {
+      setVerifyError('Saisissez votre identifiant et votre nom')
       return
     }
     setLoading(true)
     setVerifyError(null)
     try {
-      const res = await fetch(`/api/users/${encodeURIComponent(cible)}`)
+      const res = await fetch(
+        `/api/users/${encodeURIComponent(cible)}?nom=${encodeURIComponent(nomCible)}`,
+      )
       const d = await res.json()
       if (res.ok && d.success) {
         setVerified(true)
@@ -137,9 +141,11 @@ function ReservationFormInner() {
 
   useEffect(() => {
     const id = searchParams.get('id')
-    if (id) {
-      setData((p) => ({ ...p, userId: id }))
-      void verifier(id)
+    const nomQ = searchParams.get('nom')
+    if (id) setData((p) => ({ ...p, userId: id }))
+    if (id && nomQ) {
+      setVerifyNom(nomQ)
+      void verifier(id, nomQ)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -238,19 +244,30 @@ function ReservationFormInner() {
           <div className="grid gap-4">
             <div>
               <span className={labelCls}>Votre identifiant usager *</span>
+              <input
+                className={cn(inputCls, 'font-sora tracking-wide')}
+                value={data.userId}
+                onChange={(e) => {
+                  set('userId', e.target.value)
+                  setVerified(false)
+                  setVerifyError(null)
+                }}
+                placeholder="IMA-2026-0001"
+              />
+              <span className={cn(labelCls, 'mt-3')}>Votre nom de famille *</span>
               <div className="flex gap-2.5">
                 <input
-                  className={cn(inputCls, 'flex-1 font-sora tracking-wide')}
-                  value={data.userId}
+                  className={cn(inputCls, 'flex-1')}
+                  value={verifyNom}
                   onChange={(e) => {
-                    set('userId', e.target.value)
+                    setVerifyNom(e.target.value)
                     setVerified(false)
                     setVerifyError(null)
                   }}
-                  placeholder="IMA-2026-0001"
+                  placeholder="Aïssi"
                 />
                 <button
-                  onClick={() => verifier(data.userId)}
+                  onClick={() => verifier(data.userId, verifyNom)}
                   disabled={loading}
                   className="flex items-center gap-2 rounded-xl bg-ima-primary px-[18px] text-sm font-semibold text-white"
                 >

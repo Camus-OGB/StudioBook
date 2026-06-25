@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
+// Le lien Admin n'est volontairement pas exposé dans la navigation publique.
+// L'accès se fait en saisissant /admin (protégé par le middleware → page de connexion).
 const LINKS = [
   { href: '/inscription', label: "S'inscrire" },
   { href: '/reservation', label: 'Réserver' },
-  { href: '/admin', label: 'Admin' },
 ]
 
 export default function SiteHeader() {

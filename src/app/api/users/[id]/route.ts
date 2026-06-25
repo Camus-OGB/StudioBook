@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { rateLimit, clientIp, tooMany } from '@/lib/rateLimit'
 
-// GET /api/users/[id] → vérifier un identifiant usager (champs non sensibles)
+// GET /api/users/[id]?nom=... → vérifier un identifiant usager.
+// Le nom est exigé (et doit correspondre) pour empêcher l'énumération des
+// usagers via des identifiants séquentiels devinables (fuite de données).
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  // Anti-énumération / anti-moissonnage : 20 vérifications / 10 min par IP
+  const limite = rateLimit(`verify:${clientIp(request)}`, 20, 10 * 60 * 1000)
+  if (!limite.ok) return tooMany(limite.retryAfter)
+
+  const introuvable = NextResponse.json(
+    { success: false, error: 'Identifiant ou nom incorrect' },
+    { status: 404 },
+  )
+
+  const { searchParams } = new URL(request.url)
+  const nom = searchParams.get('nom')?.trim()
+  if (!nom) return introuvable
+
   try {
     const user = await prisma.user.findUnique({
       where: { id: params.id },
@@ -22,11 +38,10 @@ export async function GET(
       },
     })
 
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Usager introuvable' },
-        { status: 404 },
-      )
+    // Réponse identique si l'usager n'existe pas OU si le nom ne correspond pas,
+    // pour ne révéler aucune information par énumération.
+    if (!user || user.nom.trim().toLowerCase() !== nom.toLowerCase()) {
+      return introuvable
     }
 
     return NextResponse.json({ success: true, user })

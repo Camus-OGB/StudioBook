@@ -10,7 +10,8 @@
     "docker:dev": "docker compose up -d && sleep 3 && npx prisma migrate dev",
     "docker:down": "docker compose down",
     "db:reset": "npx prisma migrate reset --force",
-    "db:seed": "node prisma/seed.mjs"
+    "db:seed": "node prisma/seed.mjs",
+    "secrets": "sh scripts/generate-secrets.sh"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"
