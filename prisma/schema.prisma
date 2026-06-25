@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model IdCounter {
+  id    Int @id @default(1)
+  value Int @default(0)
+  @@map("id_counter")
+}
+
+model User {
+  id                  String        @id
+  nom                 String
+  prenom              String
+  email               String        @unique
+  telephone           String
+  lien                String
+  programme           String?
+  domainesInteret     String[]
+  niveauExperience    String
+  objectifUtilisation String
+  descriptionProjet   String?
+  dateInscription     DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  reservations        Reservation[]
+  @@map("users")
+}
+
+model Reservation {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nom              String
+  whatsapp         String
+  typeRes          String
+  materielsChoisis String[]
+  espacesChoisis   String[]
+  autreDetail      String?
+  dateDebut        String?
+  dateFin          String?
+  heureDebut       String?
+  heureFin         String?
+  objetProjet      String
+  nbPersonnes      Int      @default(1)
+  statut           String   @default("En attente")
+  notes            String?
+  debutAt          DateTime?
+  finAt            DateTime?
+  dateCreation     DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  @@index([debutAt, finAt])
+  @@map("reservations")
+}
+
+model OpeningHours {
+  id        String @id @default(cuid())
+  espace    String // valeur du catalogue (categorie = espace)
+  jour      Int // 0 = dimanche ... 6 = samedi
+  ouverture String // "HH:mm"
+  fermeture String // "HH:mm"
+
+  @@unique([espace, jour])
+  @@map("opening_hours")
+}
+
+model Blackout {
+  id        String   @id @default(cuid())
+  espace    String? // null = tous les espaces
+  debutAt   DateTime
+  finAt     DateTime
+  motif     String?
+  createdAt DateTime @default(now())
+
+  @@index([espace])
+  @@map("blackouts")
+}
+
+model CatalogItem {
+  id        String   @id @default(cuid())
+  categorie String
+  valeur    String
+  ordre     Int      @default(0)
+  actif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([categorie, valeur])
+  @@index([categorie, actif])
+  @@map("catalog_items")
+}
