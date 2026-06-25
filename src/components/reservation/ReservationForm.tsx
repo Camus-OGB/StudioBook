@@ -195,7 +195,7 @@ function ReservationFormInner() {
   if (resultId) {
     const reference = `RES-${resultId.slice(-8).toUpperCase()}`
     return (
-      <div className="mx-auto max-w-[680px] px-5 pb-16 pt-9">
+      <div className="mx-auto max-w-[780px] px-5 pb-16 pt-9">
         <div className="animate-ima-up rounded-[22px] border border-ima-line bg-white p-8 text-center shadow-[0_14px_40px_rgba(40,20,80,0.08)]">
           <div className="mx-auto flex h-[66px] w-[66px] items-center justify-center rounded-full bg-[#FFF4D6]">
             <span className="text-[32px]">🎉</span>
@@ -224,7 +224,7 @@ function ReservationFormInner() {
 
   // ----- Formulaire -----
   return (
-    <div className="mx-auto max-w-[680px] px-5 pb-16 pt-9">
+    <div className="mx-auto max-w-[780px] px-5 pb-16 pt-9">
       <Link href="/" className="text-[13px] font-medium text-ima-faint hover:text-ima-primary">
         ← Accueil
       </Link>

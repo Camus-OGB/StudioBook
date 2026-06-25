@@ -187,7 +187,7 @@ export default function AdminDashboard() {
   const end = Math.min(page * LIMIT, total)
 
   return (
-    <div className="mx-auto max-w-[1140px] px-5 pb-16 pt-8">
+    <div className="mx-auto max-w-[1280px] px-5 pb-16 pt-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-[1px] text-ima-faint">

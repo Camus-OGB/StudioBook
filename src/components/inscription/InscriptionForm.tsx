@@ -167,7 +167,7 @@ export default function InscriptionForm() {
   // ----- Écran de succès -----
   if (resultId) {
     return (
-      <div className="mx-auto max-w-[680px] px-5 pb-16 pt-9">
+      <div className="mx-auto max-w-[780px] px-5 pb-16 pt-9">
         <div className="animate-ima-up rounded-[22px] border border-ima-line bg-white p-8 text-center shadow-[0_14px_40px_rgba(40,20,80,0.08)]">
           <div
             className={cn(
@@ -228,7 +228,7 @@ export default function InscriptionForm() {
 
   // ----- Formulaire -----
   return (
-    <div className="mx-auto max-w-[680px] px-5 pb-16 pt-9">
+    <div className="mx-auto max-w-[780px] px-5 pb-16 pt-9">
       <Link href="/" className="text-[13px] font-medium text-ima-faint hover:text-ima-primary">
         ← Accueil
       </Link>
@@ -290,9 +290,6 @@ export default function InscriptionForm() {
               <span className={labelCls}>Programme / formation <span className="font-normal text-ima-faint">(optionnel)</span></span>
               <input className={cn(inputCls, 'border-[#E4E1EE]')} value={data.programme} onChange={(e) => set('programme', e.target.value)} placeholder="Ex. Web Academy, promotion 2026" />
             </label>
-            <div className="rounded-xl bg-[#f7f5fd] px-4 py-3.5 text-[13px] leading-relaxed text-ima-muted">
-              💡 Les options sont gérées par l’administration via le catalogue.
-            </div>
           </div>
         )}
 

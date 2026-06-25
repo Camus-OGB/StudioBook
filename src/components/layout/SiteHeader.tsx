@@ -16,7 +16,7 @@ export default function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-ima-line bg-white/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-[1140px] items-center justify-between gap-4 px-5 py-3">
+      <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-5 py-3">
         <Link href="/" className="flex items-center gap-3" aria-label="IMA Studio, accueil">
           <span className="flex h-[38px] w-[38px] items-center justify-center rounded-xl bg-ima-primary font-sora text-base font-extrabold text-white shadow-[0_4px_12px_rgba(69,39,160,0.32)]">
             IS
