@@ -76,6 +76,9 @@ function ReservationFormInner() {
 
   const [materiels, setMateriels] = useState<string[]>([])
   const [espaces, setEspaces] = useState<string[]>([])
+  const [horaires, setHoraires] = useState<
+    { jour: number; ouverture: string; fermeture: string }[]
+  >([])
 
   const today = new Date().toISOString().split('T')[0]
   const showMateriel = data.typeRes === 'Matériel' || data.typeRes === 'Les deux'
@@ -89,6 +92,12 @@ function ReservationFormInner() {
           setMateriels(d.data.materiel ?? [])
           setEspaces(d.data.espace ?? [])
         }
+      })
+      .catch(() => {})
+    fetch('/api/opening-hours')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setHoraires(d.data)
       })
       .catch(() => {})
   }, [])
@@ -179,9 +188,24 @@ function ReservationFormInner() {
     data.typeRes &&
     (!showMateriel || data.materielsChoisis.length > 0) &&
     (!showEspace || data.espacesChoisis.length > 0)
+  // Horaires du jour sélectionné (les espaces sont soumis aux horaires du studio).
+  const jourSel = data.dateDebut ? new Date(`${data.dateDebut}T00:00:00`).getDay() : null
+  const horaireJour = jourSel !== null ? horaires.find((h) => h.jour === jourSel) : undefined
+  const horsPlage =
+    showEspace &&
+    !!horaireJour &&
+    !!data.heureDebut &&
+    !!data.heureFin &&
+    (data.heureDebut < horaireJour.ouverture || data.heureFin > horaireJour.fermeture)
+  const finAvantDebut =
+    showEspace && !!data.heureDebut && !!data.heureFin && data.heureFin <= data.heureDebut
+
+  const creneauOk =
+    !showEspace ||
+    (!!data.heureDebut && !!data.heureFin && !!horaireJour && !horsPlage && !finAvantDebut)
+
   const canStep3 =
-    data.dateDebut && data.objetProjet.trim() && data.nbPersonnes >= 1 &&
-    (!showEspace || (data.heureDebut && data.heureFin))
+    data.dateDebut && data.objetProjet.trim() && data.nbPersonnes >= 1 && creneauOk
 
   const canNext = step === 1 ? canStep1 : step === 2 ? canStep2 : step === 3 ? canStep3 : true
 
@@ -389,6 +413,33 @@ function ReservationFormInner() {
                 <input type="time" className={inputCls} value={data.heureFin} onChange={(e) => set('heureFin', e.target.value)} />
               </label>
             </div>
+
+            {showEspace && data.dateDebut && (
+              <div className="-mt-1 text-[13px]">
+                {!horaireJour ? (
+                  <p className="rounded-xl bg-[#FBE4E4] px-3.5 py-2.5 leading-relaxed text-[#C0392B]">
+                    🔒 Le studio est fermé ce jour-là. Choisissez une autre date.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-ima-muted">
+                      🕒 Ouvert de <b className="text-ima-ink">{horaireJour.ouverture}</b> à{' '}
+                      <b className="text-ima-ink">{horaireJour.fermeture}</b> ce jour-là.
+                    </p>
+                    {horsPlage && (
+                      <p className="mt-1.5 font-medium text-[#C0392B]">
+                        L’heure choisie est hors de cette plage d’ouverture.
+                      </p>
+                    )}
+                    {finAvantDebut && (
+                      <p className="mt-1.5 font-medium text-[#C0392B]">
+                        L’heure de fin doit suivre l’heure de début.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
             <label>
               <span className={labelCls}>Nombre de personnes *</span>
               <input type="number" min={1} max={20} className={inputCls} value={data.nbPersonnes} onChange={(e) => set('nbPersonnes', Number(e.target.value) || 1)} />
