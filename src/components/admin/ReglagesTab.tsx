@@ -24,8 +24,6 @@ const inputCls =
 const labelCls = 'mb-1 block text-[12px] font-semibold text-[#3a3348]'
 const btnPrimary =
   'rounded-xl bg-ima-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110'
-const btnSecondary =
-  'rounded-lg border border-[#d9d0f2] bg-white px-3 py-2 text-[13px] font-semibold text-ima-primary transition hover:bg-ima-lilac'
 const sectionCls = 'rounded-2xl border border-ima-line bg-white p-6'
 const titleCls = 'mb-4 font-sora text-lg font-bold text-ima-ink'
 
@@ -79,27 +77,49 @@ export default function ReglagesTab() {
     setDraft(d)
   }, [hours])
 
-  async function enregistrerJour(jour: number) {
-    const { ouverture, fermeture } = draft[jour] ?? {}
-    if (!ouverture || !fermeture) {
-      setMsg('Renseignez ouverture et fermeture')
-      return
-    }
-    const res = await fetch('/api/admin/opening-hours', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jour, ouverture, fermeture }),
-    })
-    const data = await res.json()
-    setMsg(res.ok ? `${JOURS[jour]} enregistré` : data.error)
-    if (res.ok) void loadAll()
+  function viderJour(jour: number) {
+    setDraft((d) => ({ ...d, [jour]: { ouverture: '', fermeture: '' } }))
   }
 
-  async function supprimerJour(jour: number) {
-    const existing = hours.find((h) => h.jour === jour)
-    if (!existing) return
-    await fetch(`/api/admin/opening-hours/${existing.id}`, { method: 'DELETE' })
-    void loadAll()
+  // Enregistre les 7 jours d'un coup : upsert des jours renseignés, suppression
+  // des jours vidés. Vérifie d'abord la cohérence de chaque ligne.
+  async function enregistrerHoraires() {
+    for (let j = 0; j < 7; j++) {
+      const o = draft[j]?.ouverture ?? ''
+      const f = draft[j]?.fermeture ?? ''
+      if ((o && !f) || (!o && f)) {
+        setMsg(`${JOURS[j]} : renseignez l’ouverture ET la fermeture, ou laissez les deux vides (jour fermé).`)
+        return
+      }
+      if (o && f && o >= f) {
+        setMsg(`${JOURS[j]} : l’heure d’ouverture doit précéder la fermeture.`)
+        return
+      }
+    }
+    try {
+      await Promise.all(
+        Array.from({ length: 7 }, (_, j) => {
+          const o = draft[j]?.ouverture ?? ''
+          const f = draft[j]?.fermeture ?? ''
+          const existing = hours.find((h) => h.jour === j)
+          if (o && f) {
+            return fetch('/api/admin/opening-hours', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jour: j, ouverture: o, fermeture: f }),
+            })
+          }
+          if (existing) {
+            return fetch(`/api/admin/opening-hours/${existing.id}`, { method: 'DELETE' })
+          }
+          return Promise.resolve(null)
+        }),
+      )
+      setMsg('Horaires enregistrés.')
+      void loadAll()
+    } catch {
+      setMsg('Erreur lors de l’enregistrement des horaires.')
+    }
   }
 
   async function ajouterBlocage() {
@@ -109,6 +129,10 @@ export default function ReglagesTab() {
     }
     const debutAt = new Date(`${boDateDebut}T${boHeureDebut}:00`).toISOString()
     const finAt = new Date(`${boDateFin}T${boHeureFin}:00`).toISOString()
+    if (new Date(finAt) <= new Date(debutAt)) {
+      setMsg('La fin du blocage doit suivre le début.')
+      return
+    }
     const res = await fetch('/api/admin/blackouts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -162,15 +186,22 @@ export default function ReglagesTab() {
                 value={draft[j]?.fermeture ?? ''}
                 onChange={(e) => setDraft((d) => ({ ...d, [j]: { ...d[j], fermeture: e.target.value } }))}
               />
-              <button onClick={() => enregistrerJour(j)} className={btnSecondary}>Enregistrer</button>
-              {hours.some((h) => h.jour === j) && (
-                <button onClick={() => supprimerJour(j)} className="rounded-lg px-2.5 py-2 text-[13px] font-semibold text-ima-faint hover:text-[#C0392B]">
-                  Effacer
+              {draft[j]?.ouverture || draft[j]?.fermeture ? (
+                <button
+                  onClick={() => viderJour(j)}
+                  className="rounded-lg px-2.5 py-2 text-[13px] font-semibold text-ima-faint hover:text-[#C0392B]"
+                >
+                  Vider
                 </button>
+              ) : (
+                <span className="text-[12.5px] font-medium text-ima-faint">Fermé</span>
               )}
             </div>
           ))}
         </div>
+        <button onClick={enregistrerHoraires} className={`${btnPrimary} mt-4`}>
+          Enregistrer les horaires
+        </button>
       </section>
 
       {/* Blocages */}
