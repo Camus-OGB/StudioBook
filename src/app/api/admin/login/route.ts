@@ -44,11 +44,17 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Cookie marqué Secure uniquement si la connexion est réellement en HTTPS.
+  // (En HTTP, un cookie Secure est ignoré par le navigateur → login impossible.)
+  const isHttps =
+    request.headers.get('x-forwarded-proto') === 'https' ||
+    request.nextUrl.protocol === 'https:'
+
   const token = await createToken(secret)
   const res = NextResponse.json({ success: true })
   res.cookies.set(ADMIN_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isHttps,
     sameSite: 'lax',
     path: '/',
     maxAge: SESSION_MAX_AGE,
