@@ -4,6 +4,7 @@ import { reservationSchema } from '@/lib/validations'
 import { invalidValues } from '@/lib/catalog'
 import { combineDateTime, checkEspaceAvailability } from '@/lib/planning'
 import { rateLimit, clientIp, tooMany } from '@/lib/rateLimit'
+import { notifyReservationRecue } from '@/lib/notifications'
 
 // POST /api/reservations → créer une réservation
 export async function POST(request: NextRequest) {
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await prisma.user.findUnique({
       where: { id: data.userId },
-      select: { id: true },
+      select: { id: true, email: true, prenom: true, nom: true },
     })
     if (!user) {
       return NextResponse.json(
@@ -101,6 +102,15 @@ export async function POST(request: NextRequest) {
 
     const reservation = await prisma.reservation.create({
       data: { ...data, debutAt, finAt },
+    })
+
+    // Accusé de réception « en attente » (non bloquant).
+    await notifyReservationRecue({
+      email: user.email,
+      prenom: user.prenom,
+      nom: user.nom,
+      whatsapp: reservation.whatsapp,
+      reservation,
     })
 
     return NextResponse.json({ success: true, reservation }, { status: 201 })

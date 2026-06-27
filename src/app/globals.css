@@ -21,4 +21,33 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Scrollbar fine et discrète (utilisée dans les modals et zones défilantes) */
+  .scroll-soft {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: #d9d0f2 transparent;
+  }
+  .scroll-soft::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-soft::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-soft::-webkit-scrollbar-thumb {
+    background-color: #d9d0f2;
+    border-radius: 9999px;
+  }
+  .scroll-soft::-webkit-scrollbar-thumb:hover {
+    background-color: #c3b6ec;
+  }
+
+  /* Masque la scrollbar tout en conservant le défilement (molette / tactile) */
+  .scroll-hidden {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/anciens Edge */
+  }
+  .scroll-hidden::-webkit-scrollbar {
+    display: none; /* WebKit / Brave / Chrome */
+  }
 }

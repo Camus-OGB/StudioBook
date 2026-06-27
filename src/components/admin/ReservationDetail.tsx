@@ -11,6 +11,12 @@ function statutVariant(statut: string): BadgeVariant {
   return 'default'
 }
 
+// Libellé d'affichage du type (la valeur « Les deux » stockée en base est
+// traduite en quelque chose de plus explicite côté interface).
+function libelleType(typeRes: string): string {
+  return typeRes === 'Les deux' ? 'Matériel et espace' : typeRes
+}
+
 function creneau(date?: string | null, heure?: string | null): string {
   const d = date ? formatDate(date) : ''
   const parts = [d, heure].filter(Boolean)
@@ -28,7 +34,7 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
+    <div className="rounded-2xl border border-ima-line bg-[#faf9fd] p-4">
       <h3 className="mb-3 font-sora text-[13px] font-bold uppercase tracking-wide text-ima-primary">
         {title}
       </h3>
@@ -42,13 +48,13 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between rounded-2xl bg-ima-lilac/60 px-4 py-3">
         <span className="font-sora text-lg font-extrabold text-ima-primary">{reference}</span>
         <Badge variant={statutVariant(r.statut)}>{r.statut}</Badge>
       </div>
 
       <Section title="Usager">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Identifiant" value={r.userId} />
           <Field label="Nom (réservation)" value={r.nom} />
           <Field label="WhatsApp" value={r.whatsapp} />
@@ -58,11 +64,15 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
       </Section>
 
       <Section title="Demande">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Type" value={r.typeRes} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Type" value={libelleType(r.typeRes)} />
           <Field label="Nombre de personnes" value={r.nbPersonnes} />
-          <Field label="Matériels" value={r.materielsChoisis.length ? r.materielsChoisis.join(', ') : '—'} />
-          <Field label="Espaces" value={r.espacesChoisis.length ? r.espacesChoisis.join(', ') : '—'} />
+          {r.materielsChoisis.length > 0 && (
+            <Field label="Matériels" value={r.materielsChoisis.join(', ')} />
+          )}
+          {r.espacesChoisis.length > 0 && (
+            <Field label="Espaces" value={r.espacesChoisis.join(', ')} />
+          )}
           <div className="col-span-2">
             <Field label="Objet du projet" value={r.objetProjet} />
           </div>
@@ -75,14 +85,14 @@ export default function ReservationDetail({ reservation: r }: { reservation: Res
       </Section>
 
       <Section title="Planning">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Début" value={creneau(r.dateDebut, r.heureDebut)} />
           <Field label="Fin" value={creneau(r.dateFin, r.heureFin)} />
         </div>
       </Section>
 
       <Section title="Suivi">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Notes internes" value={r.notes || '—'} />
           <Field label="Créée le" value={formatDate(r.dateCreation)} />
         </div>

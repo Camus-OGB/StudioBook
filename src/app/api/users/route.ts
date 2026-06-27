@@ -4,6 +4,7 @@ import { userSchema } from '@/lib/validations'
 import { genUserId } from '@/lib/utils'
 import { invalidValues } from '@/lib/catalog'
 import { rateLimit, clientIp, tooMany } from '@/lib/rateLimit'
+import { notifyInscription } from '@/lib/notifications'
 
 // POST /api/users → créer un usager
 export async function POST(request: NextRequest) {
@@ -65,6 +66,14 @@ export async function POST(request: NextRequest) {
     const id = await genUserId()
     const user = await prisma.user.create({
       data: { id, ...parsed.data },
+    })
+
+    // Notification de bienvenue (non bloquante : n'échoue jamais le flux).
+    await notifyInscription({
+      email: user.email,
+      prenom: user.prenom,
+      nom: user.nom,
+      userId: user.id,
     })
 
     return NextResponse.json({ success: true, user }, { status: 201 })

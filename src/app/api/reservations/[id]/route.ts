@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { statutSchema } from '@/lib/validations'
+import { notifyStatutChange } from '@/lib/notifications'
 
 const patchSchema = z.object({
   statut: statutSchema.optional(),
@@ -40,12 +41,27 @@ export async function PATCH(
   }
 
   try {
-    const reservation = await prisma.reservation.update({
+    const { user, ...reservation } = await prisma.reservation.update({
       where: { id: params.id },
       data: parsed.data,
+      include: { user: { select: { email: true, prenom: true, nom: true } } },
     })
 
-    return NextResponse.json({ success: true, reservation })
+    // Notifie l'usager uniquement lorsque le statut a été modifié
+    // (une simple mise à jour de notes ne déclenche pas d'email).
+    let notified = false
+    if (parsed.data.statut !== undefined) {
+      const r = await notifyStatutChange({
+        email: user.email,
+        prenom: user.prenom,
+        nom: user.nom,
+        whatsapp: reservation.whatsapp,
+        reservation,
+      })
+      notified = r.emailSent
+    }
+
+    return NextResponse.json({ success: true, reservation, notified })
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Modal from '@/components/ui/Modal'
+import { useToast } from '@/components/ui/Toast'
 import StatsCards from '@/components/admin/StatsCards'
 import UsagersTable from '@/components/admin/UsagersTable'
 import ReservationsTable from '@/components/admin/ReservationsTable'
@@ -10,12 +11,13 @@ import ReservationDetail from '@/components/admin/ReservationDetail'
 import UsagerDetail from '@/components/admin/UsagerDetail'
 import CatalogueTab from '@/components/admin/CatalogueTab'
 import PlanningTab from '@/components/admin/PlanningTab'
+import ReglagesTab from '@/components/admin/ReglagesTab'
 import { STATUTS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { Stats, User, Reservation } from '@/types'
 
 const LIMIT = 20
-type Tab = 'users' | 'reservations' | 'catalogue' | 'planning'
+type Tab = 'planning' | 'users' | 'reservations' | 'catalogue' | 'reglages'
 
 interface UsagerDetailData {
   user: User
@@ -23,10 +25,11 @@ interface UsagerDetailData {
 }
 
 const TABS: { key: Tab; label: string }[] = [
+  { key: 'planning', label: 'Planning' },
   { key: 'users', label: 'Usagers' },
   { key: 'reservations', label: 'Réservations' },
   { key: 'catalogue', label: 'Catalogue' },
-  { key: 'planning', label: 'Planning' },
+  { key: 'reglages', label: 'Réglages' },
 ]
 
 const inputCls =
@@ -34,6 +37,7 @@ const inputCls =
 
 export default function AdminDashboard() {
   const router = useRouter()
+  const { notify } = useToast()
   const [stats, setStats] = useState<Stats | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [usersTotal, setUsersTotal] = useState(0)
@@ -41,12 +45,15 @@ export default function AdminDashboard() {
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [resTotal, setResTotal] = useState(0)
   const [resPage, setResPage] = useState(1)
-  const [activeTab, setActiveTab] = useState<Tab>('users')
+  const [activeTab, setActiveTab] = useState<Tab>('planning')
   const [searchQuery, setSearchQuery] = useState('')
   const [statutFilter, setStatutFilter] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null)
+  const [selectedResIds, setSelectedResIds] = useState<string[]>([])
+  const [refusIds, setRefusIds] = useState<string[] | null>(null)
+  const [motifRefus, setMotifRefus] = useState('')
   const [usagerDetail, setUsagerDetail] = useState<UsagerDetailData | null>(null)
   const [usagerOpen, setUsagerOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -89,6 +96,7 @@ export default function AdminDashboard() {
   const loadReservations = useCallback(async () => {
     setIsLoading(true)
     setError(null)
+    setSelectedResIds([])
     try {
       const params = new URLSearchParams({ page: String(resPage), limit: String(LIMIT) })
       if (searchQuery.trim()) params.set('search', searchQuery.trim())
@@ -116,21 +124,75 @@ export default function AdminDashboard() {
     if (activeTab === 'reservations') void loadReservations()
   }, [activeTab, loadReservations])
 
-  async function handleStatutChange(id: string, statut: string) {
-    try {
-      const res = await fetch(`/api/reservations/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ statut }),
-      })
-      const d = await res.json()
-      if (res.ok && d.success) {
-        setReservations((prev) => prev.map((r) => (r.id === id ? { ...r, statut } : r)))
-        void loadStats()
-      }
-    } catch {
-      /* ignore */
+  // Applique un statut à une ou plusieurs réservations en une fois, avec un seul
+  // retour de synthèse (les usagers concernés sont notifiés par email côté API).
+  async function appliquerStatut(ids: string[], statut: string, notes?: string) {
+    if (ids.length === 0) return
+    const resultats = await Promise.all(
+      ids.map(async (id) => {
+        try {
+          const res = await fetch(`/api/reservations/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(notes !== undefined ? { statut, notes } : { statut }),
+          })
+          const d = await res.json()
+          return { ok: res.ok && d.success, notified: Boolean(d.notified) }
+        } catch {
+          return { ok: false, notified: false }
+        }
+      }),
+    )
+    const successIds = ids.filter((_, i) => resultats[i].ok)
+    const n = successIds.length
+    const notifies = resultats.filter((r) => r.notified).length
+    if (n > 0) {
+      setReservations((prev) =>
+        prev.map((r) =>
+          successIds.includes(r.id)
+            ? { ...r, statut, ...(notes !== undefined ? { notes } : {}) }
+            : r,
+        ),
+      )
+      void loadStats()
+      const verbe = statut === 'Confirmée' ? 'confirmée' : 'refusée'
+      const s = n > 1 ? 's' : ''
+      // N'affirme la notification que si un email a réellement été envoyé.
+      const suffixe =
+        notifies === n ? ` — usager${s} notifié${s} par email.` : '.'
+      notify(`${n} réservation${s} ${verbe}${s}${suffixe}`, 'success')
     }
+    const echecs = ids.length - n
+    if (echecs > 0) notify(`${echecs} mise(s) à jour ont échoué, réessayez.`, 'error')
+    setSelectedResIds([])
+  }
+
+  // Refus avec motif : ouvre une modale, le motif est enregistré dans `notes`
+  // (repris tel quel dans l'email de notification envoyé aux usagers).
+  function demanderRefus(ids: string[]) {
+    if (ids.length === 0) return
+    setRefusIds(ids)
+    setMotifRefus('')
+  }
+
+  async function confirmerRefus() {
+    if (!refusIds || motifRefus.trim().length === 0) return
+    const ids = refusIds
+    setRefusIds(null)
+    await appliquerStatut(ids, 'Refusée', motifRefus.trim())
+  }
+
+  function toggleResSelection(id: string) {
+    setSelectedResIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+
+  function toggleAllRes() {
+    const pendingIds = reservations.filter((r) => r.statut === 'En attente').map((r) => r.id)
+    setSelectedResIds((prev) =>
+      pendingIds.length > 0 && pendingIds.every((id) => prev.includes(id)) ? [] : pendingIds,
+    )
   }
 
   async function ouvrirUsager(user: User) {
@@ -235,6 +297,8 @@ export default function AdminDashboard() {
         <div className="mt-5">
           <PlanningTab />
         </div>
+      ) : activeTab === 'reglages' ? (
+        <ReglagesTab />
       ) : (
         <div className="mt-5">
           {/* Contrôles */}
@@ -274,6 +338,34 @@ export default function AdminDashboard() {
             </button>
           </div>
 
+          {activeTab === 'reservations' && selectedResIds.length > 0 && (
+            <div className="mb-3.5 flex flex-wrap items-center gap-3 rounded-xl border border-ima-line bg-ima-lilac/50 px-4 py-3">
+              <span className="text-sm font-semibold text-ima-primary">
+                {selectedResIds.length} sélectionnée{selectedResIds.length > 1 ? 's' : ''}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => void appliquerStatut(selectedResIds, 'Confirmée')}
+                  className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-emerald-700"
+                >
+                  Confirmer
+                </button>
+                <button
+                  onClick={() => demanderRefus(selectedResIds)}
+                  className="rounded-lg bg-rose-600 px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-rose-700"
+                >
+                  Refuser
+                </button>
+                <button
+                  onClick={() => setSelectedResIds([])}
+                  className="rounded-lg px-3.5 py-1.5 text-[13px] font-semibold text-ima-muted transition-colors hover:bg-white"
+                >
+                  Désélectionner
+                </button>
+              </div>
+            </div>
+          )}
+
           {error ? (
             <div className="rounded-2xl border border-[#f4d6d6] bg-white px-6 py-10 text-center">
               <div className="text-[34px]">⚠️</div>
@@ -306,7 +398,11 @@ export default function AdminDashboard() {
               ) : (
                 <ReservationsTable
                   reservations={reservations}
-                  onStatutChange={handleStatutChange}
+                  selectedIds={selectedResIds}
+                  onToggleOne={toggleResSelection}
+                  onToggleAll={toggleAllRes}
+                  onConfirm={(id) => void appliquerStatut([id], 'Confirmée')}
+                  onRefuse={(reservation) => demanderRefus([reservation.id])}
                   onRowClick={setSelectedReservation}
                 />
               )}
@@ -347,6 +443,49 @@ export default function AdminDashboard() {
 
       <Modal open={usagerOpen} onClose={() => setUsagerOpen(false)} title="Fiche usager">
         <UsagerDetail data={usagerDetail} isLoading={detailLoading} />
+      </Modal>
+
+      <Modal
+        open={refusIds !== null}
+        onClose={() => setRefusIds(null)}
+        title={
+          refusIds && refusIds.length > 1
+            ? `Refuser ${refusIds.length} réservations`
+            : 'Refuser la réservation'
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-ima-muted">
+            Indiquez la raison du refus. Elle sera communiquée{' '}
+            {refusIds && refusIds.length > 1 ? 'aux usagers concernés' : 'à l’usager'} dans
+            l’email de notification.
+          </p>
+          <textarea
+            value={motifRefus}
+            onChange={(e) => setMotifRefus(e.target.value)}
+            rows={4}
+            autoFocus
+            placeholder="Ex. : le créneau demandé n’est plus disponible, merci de proposer une autre date."
+            className={`${inputCls} w-full resize-none`}
+          />
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setRefusIds(null)}
+              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-ima-muted hover:bg-ima-lilac/60"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={() => void confirmerRefus()}
+              disabled={motifRefus.trim().length === 0}
+              className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Confirmer le refus
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

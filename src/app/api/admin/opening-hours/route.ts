@@ -8,7 +8,6 @@ const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/
 
 const upsertSchema = z
   .object({
-    espace: z.string().trim().min(1, "L'espace est requis"),
     jour: z.number().int().min(0).max(6),
     ouverture: z.string().regex(HEURE, 'Heure invalide (HH:mm)'),
     fermeture: z.string().regex(HEURE, 'Heure invalide (HH:mm)'),
@@ -17,11 +16,11 @@ const upsertSchema = z
     message: "L'ouverture doit précéder la fermeture",
   })
 
-// GET /api/admin/opening-hours → tous les horaires
+// GET /api/admin/opening-hours → tous les horaires (globaux, par jour)
 export async function GET() {
   try {
     const items = await prisma.openingHours.findMany({
-      orderBy: [{ espace: 'asc' }, { jour: 'asc' }],
+      orderBy: { jour: 'asc' },
     })
     return NextResponse.json({ success: true, data: items })
   } catch (error) {
@@ -54,11 +53,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { espace, jour, ouverture, fermeture } = parsed.data
+    const { jour, ouverture, fermeture } = parsed.data
     const item = await prisma.openingHours.upsert({
-      where: { espace_jour: { espace, jour } },
+      where: { jour },
       update: { ouverture, fermeture },
-      create: { espace, jour, ouverture, fermeture },
+      create: { jour, ouverture, fermeture },
     })
     return NextResponse.json({ success: true, item }, { status: 201 })
   } catch (error) {

@@ -59,12 +59,10 @@ model Reservation {
 
 model OpeningHours {
   id        String @id @default(cuid())
-  espace    String // valeur du catalogue (categorie = espace)
-  jour      Int // 0 = dimanche ... 6 = samedi
+  jour      Int    @unique // 0 = dimanche ... 6 = samedi (horaires globaux du studio)
   ouverture String // "HH:mm"
   fermeture String // "HH:mm"
 
-  @@unique([espace, jour])
   @@map("opening_hours")
 }
 

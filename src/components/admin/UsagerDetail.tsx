@@ -1,5 +1,6 @@
 import type { User, Reservation } from '@/types'
 import Badge from '@/components/ui/Badge'
+import { DetailSkeleton } from '@/components/ui/Skeleton'
 import { formatDate } from '@/lib/utils'
 
 type BadgeVariant = 'pending' | 'confirmed' | 'refused' | 'default'
@@ -33,15 +34,15 @@ export default function UsagerDetail({
   isLoading: boolean
 }) {
   if (isLoading || !data) {
-    return <p className="py-8 text-center text-ima-muted">Chargement…</p>
+    return <DetailSkeleton />
   }
 
   const { user, reservations } = data
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="rounded-lg bg-ima-lilac px-2.5 py-1 font-sora text-sm font-bold text-ima-primary">
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-ima-lilac/60 px-4 py-3">
+        <span className="rounded-lg bg-white px-2.5 py-1 font-sora text-sm font-bold text-ima-primary">
           {user.id}
         </span>
         <span className="font-sora text-lg font-extrabold text-ima-ink">
@@ -49,7 +50,7 @@ export default function UsagerDetail({
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 rounded-2xl border border-ima-line bg-[#faf9fd] p-4 sm:grid-cols-2">
         <Field label="Email" value={user.email} />
         <Field label="Téléphone" value={user.telephone} />
         <Field label="Lien Sème City" value={user.lien} />

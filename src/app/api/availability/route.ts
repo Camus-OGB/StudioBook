@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
         orderBy: { debutAt: 'asc' },
       }),
       prisma.openingHours.findMany({
-        where: { espace },
         orderBy: { jour: 'asc' },
       }),
     ])

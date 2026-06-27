@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
+import Modal from '@/components/ui/Modal'
+import { useToast } from '@/components/ui/Toast'
 import type { CatalogItem } from '@/types'
 
 const CATEGORIES: { key: string; label: string }[] = [
@@ -13,12 +15,14 @@ const CATEGORIES: { key: string; label: string }[] = [
 ]
 
 export default function CatalogueTab() {
+  const { notify } = useToast()
   const [items, setItems] = useState<CatalogItem[]>([])
   const [categorie, setCategorie] = useState('materiel')
   const [nouveau, setNouveau] = useState('')
   const [editId, setEditId] = useState<string | null>(null)
   const [editVal, setEditVal] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
+  const [toDelete, setToDelete] = useState<CatalogItem | null>(null)
 
   const load = useCallback(async () => {
     const res = await fetch('/api/admin/catalog')
@@ -36,50 +40,87 @@ export default function CatalogueTab() {
 
   async function ajouter() {
     if (!nouveau.trim()) return
-    const res = await fetch('/api/admin/catalog', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ categorie, valeur: nouveau.trim() }),
-    })
-    const d = await res.json()
-    if (res.ok) {
-      setNouveau('')
-      setMsg(null)
-      void load()
-    } else {
-      setMsg(d.error)
+    try {
+      const res = await fetch('/api/admin/catalog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categorie, valeur: nouveau.trim() }),
+      })
+      const d = await res.json()
+      if (res.ok) {
+        const ajoutee = nouveau.trim()
+        setNouveau('')
+        setMsg(null)
+        void load()
+        notify(`« ${ajoutee} » ajouté au catalogue.`, 'success')
+      } else {
+        setMsg(d.error ?? 'Ajout impossible.')
+      }
+    } catch {
+      notify('Impossible de contacter le serveur, réessayez.', 'error')
     }
   }
 
   async function basculer(item: CatalogItem) {
-    await fetch(`/api/admin/catalog/${item.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ actif: !item.actif }),
-    })
-    void load()
+    try {
+      const res = await fetch(`/api/admin/catalog/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actif: !item.actif }),
+      })
+      if (res.ok) {
+        void load()
+        notify(
+          item.actif
+            ? `« ${item.valeur} » masqué dans les formulaires.`
+            : `« ${item.valeur} » réactivé.`,
+          'success',
+        )
+      } else {
+        notify('Modification impossible, réessayez.', 'error')
+      }
+    } catch {
+      notify('Impossible de contacter le serveur, réessayez.', 'error')
+    }
   }
 
   async function renommer(id: string) {
     if (!editVal.trim()) return
-    const res = await fetch(`/api/admin/catalog/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ valeur: editVal.trim() }),
-    })
-    const d = await res.json()
-    if (res.ok) {
-      setEditId(null)
-      setMsg(null)
-      void load()
-    } else {
-      setMsg(d.error)
+    try {
+      const res = await fetch(`/api/admin/catalog/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valeur: editVal.trim() }),
+      })
+      const d = await res.json()
+      if (res.ok) {
+        setEditId(null)
+        setMsg(null)
+        void load()
+        notify('Option renommée.', 'success')
+      } else {
+        setMsg(d.error ?? 'Renommage impossible.')
+      }
+    } catch {
+      notify('Impossible de contacter le serveur, réessayez.', 'error')
     }
   }
 
-  async function supprimer(id: string) {
-    await fetch(`/api/admin/catalog/${id}`, { method: 'DELETE' })
-    void load()
+  async function supprimer() {
+    if (!toDelete) return
+    const cible = toDelete
+    setToDelete(null)
+    try {
+      const res = await fetch(`/api/admin/catalog/${cible.id}`, { method: 'DELETE' })
+      if (res.ok) {
+        void load()
+        notify(`« ${cible.valeur} » supprimé.`, 'success')
+      } else {
+        notify('Suppression impossible, réessayez.', 'error')
+      }
+    } catch {
+      notify('Impossible de contacter le serveur, réessayez.', 'error')
+    }
   }
 
   return (
@@ -163,7 +204,7 @@ export default function CatalogueTab() {
                   >
                     Renommer
                   </button>
-                  <button onClick={() => supprimer(it.id)} className="rounded-lg px-2 py-1.5 text-[12px] font-semibold text-[#C0392B] hover:bg-[#FBE4E4]">
+                  <button onClick={() => setToDelete(it)} className="rounded-lg px-2 py-1.5 text-[12px] font-semibold text-[#C0392B] hover:bg-[#FBE4E4]">
                     Suppr.
                   </button>
                 </>
@@ -175,6 +216,37 @@ export default function CatalogueTab() {
           Désactiver masque l’option dans les formulaires sans la supprimer (les données existantes restent intactes).
         </p>
       </div>
+
+      <Modal
+        open={toDelete !== null}
+        onClose={() => setToDelete(null)}
+        title="Supprimer cette option ?"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-ima-muted">
+            Vous êtes sur le point de supprimer définitivement{' '}
+            <span className="font-semibold text-ima-ink">« {toDelete?.valeur} »</span>.
+            Cette action est irréversible. Pour la masquer sans la supprimer, utilisez plutôt
+            « Inactif ».
+          </p>
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setToDelete(null)}
+              className="rounded-xl px-4 py-2.5 text-sm font-semibold text-ima-muted hover:bg-ima-lilac/60"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={() => void supprimer()}
+              className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-rose-700"
+            >
+              Supprimer définitivement
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

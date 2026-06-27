@@ -60,17 +60,15 @@ export async function checkEspaceAvailability({
     )
   }
 
-  // 2) Horaires d'ouverture (par espace + jour de la semaine)
+  // 2) Horaires d'ouverture du studio (globaux, par jour de la semaine)
   const jour = debutAt.getDay()
-  const horaires = await prisma.openingHours.findMany({
-    where: { espace: { in: espaces }, jour },
-  })
-  const debutH = hhmm(debutAt)
-  const finH = hhmm(finAt)
-  for (const h of horaires) {
-    if (debutH < h.ouverture || finH > h.fermeture) {
+  const horaire = await prisma.openingHours.findUnique({ where: { jour } })
+  if (horaire) {
+    const debutH = hhmm(debutAt)
+    const finH = hhmm(finAt)
+    if (debutH < horaire.ouverture || finH > horaire.fermeture) {
       erreurs.push(
-        `${h.espace} est ouvert de ${h.ouverture} à ${h.fermeture} ce jour-là`,
+        `Le studio est ouvert de ${horaire.ouverture} à ${horaire.fermeture} ce jour-là`,
       )
     }
   }
