@@ -23,6 +23,8 @@ export default function RootLayout({
         {/* Polices chargées côté navigateur (pas de dépendance Google au build). */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Chargé globalement depuis le root layout (App Router), d'où la désactivation. */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
           href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"

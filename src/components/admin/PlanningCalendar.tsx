@@ -170,6 +170,8 @@ function ColonneJour({ date, data }: { date: Date; data: AvailabilityData }) {
 
   return (
     <div className="relative flex-1" style={{ height: hauteur }}>
+      {/* Jour entièrement fermé (aucun horaire défini) */}
+      {!fen && <div className="absolute inset-0 bg-[#f4f3f8]" />}
       {/* Zones fermées (avant ouverture / après fermeture) */}
       {fen && fen.ouv > DEBUT_H * 60 && (
         <div

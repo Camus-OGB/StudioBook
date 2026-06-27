@@ -60,10 +60,13 @@ export async function checkEspaceAvailability({
     )
   }
 
-  // 2) Horaires d'ouverture du studio (globaux, par jour de la semaine)
+  // 2) Horaires d'ouverture du studio (globaux, par jour de la semaine).
+  //    Un jour sans horaire enregistré = studio FERMÉ ce jour-là.
   const jour = debutAt.getDay()
   const horaire = await prisma.openingHours.findUnique({ where: { jour } })
-  if (horaire) {
+  if (!horaire) {
+    erreurs.push('Le studio est fermé ce jour-là')
+  } else {
     const debutH = hhmm(debutAt)
     const finH = hhmm(finAt)
     if (debutH < horaire.ouverture || finH > horaire.fermeture) {

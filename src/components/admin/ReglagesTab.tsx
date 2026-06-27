@@ -141,8 +141,9 @@ export default function ReglagesTab() {
       <section className={sectionCls}>
         <h3 className={titleCls}>Horaires d’ouverture</h3>
         <p className="mb-3 text-[12.5px] text-ima-faint">
-          Ces horaires s’appliquent à <strong>tout le studio</strong>. Un jour sans horaire
-          est considéré comme « toujours ouvert ».
+          Ces horaires s’appliquent à <strong>tout le studio</strong>. Un jour <strong>sans
+          horaire</strong> est considéré comme <strong>fermé</strong> (aucune réservation
+          d’espace possible ce jour-là).
         </p>
         <div className="space-y-2">
           {JOURS.map((nom, j) => (
