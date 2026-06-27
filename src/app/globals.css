@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Familles de polices (chargées via <link> dans le layout). Référencées par Tailwind. */
+:root {
+  --font-sora: 'Sora', sans-serif;
+  --font-outfit: 'Outfit', system-ui, sans-serif;
+}
+
 html {
   scroll-behavior: smooth;
 }
