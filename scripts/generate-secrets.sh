@@ -49,6 +49,17 @@ POSTGRES_PASSWORD="$(rand_pw 24)"
 NEXTAUTH_SECRET="$(rand_hex 32)"
 ADMIN_PASSWORD="$(rand_pw 20)"
 
+# Variables surchargeables depuis l'environnement (sinon valeurs par défaut).
+# Ex. : APP_BIND=0.0.0.0 APP_PORT=3001 DB_PORT=5433 BREVO_API_KEY=xkeysib-... \
+#       sh scripts/generate-secrets.sh http://109.199.119.168:3001
+APP_BIND="${APP_BIND:-127.0.0.1}"
+APP_PORT="${APP_PORT:-3000}"
+DB_PORT="${DB_PORT:-5432}"
+BREVO_API_KEY="${BREVO_API_KEY:-}"
+NOTIF_SENDER_EMAIL="${NOTIF_SENDER_EMAIL:-studio@semecity.com}"
+NOTIF_SENDER_NAME="${NOTIF_SENDER_NAME:-IMA Studio}"
+WHATSAPP_PROVIDER="${WHATSAPP_PROVIDER:-}"
+
 umask 077  # le .env ne sera lisible que par son propriétaire
 cat > "$ENV_FILE" <<EOF
 # Généré par scripts/generate-secrets.sh — NE PAS COMMITER
@@ -59,6 +70,17 @@ DATABASE_URL=postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@db:5432/$POSTGRES_DB
 NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 ADMIN_PASSWORD=$ADMIN_PASSWORD
 NEXT_PUBLIC_APP_URL=$APP_URL
+
+# Notifications email (Brevo) — compléter BREVO_API_KEY si vide.
+BREVO_API_KEY=$BREVO_API_KEY
+NOTIF_SENDER_EMAIL=$NOTIF_SENDER_EMAIL
+NOTIF_SENDER_NAME=$NOTIF_SENDER_NAME
+WHATSAPP_PROVIDER=$WHATSAPP_PROVIDER
+
+# Déploiement Docker (ports hôtes)
+APP_BIND=$APP_BIND
+APP_PORT=$APP_PORT
+DB_PORT=$DB_PORT
 EOF
 
 echo "✅ $ENV_FILE généré (permissions 600)."
@@ -68,3 +90,8 @@ echo ""
 echo "   ⚠️  Notez ce mot de passe : il n'est affiché qu'ici."
 echo "   DATABASE_URL utilise l'hôte « db » (Docker). Pour un usage hors Docker,"
 echo "   remplacez « @db: » par « @localhost: »."
+if [ -z "$BREVO_API_KEY" ]; then
+  echo ""
+  echo "   ℹ️  BREVO_API_KEY est vide : les emails ne partiront pas tant qu'elle"
+  echo "      n'est pas renseignée dans $ENV_FILE (et l'IP du VPS autorisée dans Brevo)."
+fi
