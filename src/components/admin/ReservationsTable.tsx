@@ -42,7 +42,7 @@ export default function ReservationsTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-[760px] w-full border-collapse text-[13.5px]">
+      <table className="min-w-[880px] w-full border-collapse text-[13.5px]">
         <thead>
           <tr className="bg-[#faf9fd]">
             <th className={`${TH} w-10`}>
@@ -60,6 +60,7 @@ export default function ReservationsTable({
             <th className={TH}>OBJET</th>
             <th className={TH}>DATE</th>
             <th className={TH}>STATUT</th>
+            <th className={`${TH} text-right`}>ACTIONS</th>
           </tr>
         </thead>
         <tbody>
@@ -94,28 +95,28 @@ export default function ReservationsTable({
                 {r.dateDebut ? formatDate(r.dateDebut) : '—'}
                 {r.heureDebut ? ` · ${r.heureDebut}` : ''}
               </td>
+              <td className={TD}>
+                <Badge variant={statutVariant(r.statut)}>{r.statut}</Badge>
+              </td>
               <td className={TD} onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center gap-2.5">
-                  <Badge variant={statutVariant(r.statut)}>{r.statut}</Badge>
-                  {r.statut === 'En attente' && (
-                    <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onConfirm(r.id)}
-                        className={`${btnBase} border border-emerald-200 text-emerald-700 hover:bg-emerald-50`}
-                      >
-                        Confirmer
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onRefuse(r)}
-                        className={`${btnBase} border border-rose-200 text-rose-700 hover:bg-rose-50`}
-                      >
-                        Refuser
-                      </button>
-                    </div>
-                  )}
-                </div>
+                {r.statut === 'En attente' && (
+                  <div className="flex justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onConfirm(r.id)}
+                      className={`${btnBase} border border-emerald-200 text-emerald-700 hover:bg-emerald-50`}
+                    >
+                      Confirmer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onRefuse(r)}
+                      className={`${btnBase} border border-rose-200 text-rose-700 hover:bg-rose-50`}
+                    >
+                      Refuser
+                    </button>
+                  </div>
+                )}
               </td>
             </tr>
           ))}
